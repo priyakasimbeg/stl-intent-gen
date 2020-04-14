@@ -54,7 +54,8 @@ class CVAE(nn.Module):
     def loss (self, y, x):
         """
         Compute loss
-        :param x:
+        :param y: tensor (batch_size, future_length)  Future trajectory
+        :param x: tensor (batch_size, history_length) History
         :return:
         """
         nelbo, kl, rec = self.negative_elbo_bound(y, x)
