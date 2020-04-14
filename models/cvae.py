@@ -3,12 +3,12 @@ from models import nns
 from utils import prob_utils as ut
 from torch import nn
 from torch.nn import functional as F
-import torch.distributions.multivatiate_normal as mn
+import torch.distributions.multivariate_normal as mn
 
 
 class CVAE(nn.Module):
 
-    def _init__(self, nn='v1', name='vae', z_dim=2):
+    def __init__(self, nn='v1', name='vae', z_dim=2):
         super().__init__()
 
         self.name = name
@@ -22,6 +22,7 @@ class CVAE(nn.Module):
         self.dec = nn.Decoder(self.z_dim)
 
         # Set prior as fixed parameter
+        # Todo: incorporate relaxed one-hot categorical distribution
         self.z_prior_m = torch.nn.Parameter(torch.zeros(1), requires_grad=False)
         self.z_prior_v = torch.nn.Parameter(torch.ones(1), requires_grad=False)
         self.z_prior = (self.z_prior_m, self.z_prior_v)
@@ -40,7 +41,7 @@ class CVAE(nn.Module):
         v = self.z_prior_v
         qm, qv = self.enc.encode(y, x)
 
-        z = ut.sample_gaussian(qm, qv)
+        z = ut.sample_gaussian(qm, qv)  # Todo use Normal rsample()
         means = self.dec.decode(z)
         N, M = means.shape
         m = mn.MultivariateNormal(means, torch.eye(M))

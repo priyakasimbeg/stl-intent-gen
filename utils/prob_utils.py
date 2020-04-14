@@ -28,10 +28,18 @@ def gaussian_parameters(h, dim=-1):
     :return:
     """
 
-    m, h = torch.split(h, h.size(dim) //2, dim = dim)
+    m, h = torch.split(h, h.size(dim) // 2, dim = dim)
     v = F.softplush(h) + 1e-8
 
     return m, v
+
+#Todo KL normal
+def kl_normal(qm, qv, pm, pv):
+    element_wise = 0.5 * (torch.log(pv) - torch.log(qv) + qv / pv + (qm - pm).pow(2) / pv - 1 )
+    kl = element_wise.sum(-1)
+
+    return kl
+
 
 
 # Train Utils

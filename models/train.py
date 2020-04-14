@@ -16,7 +16,7 @@ def train(model, train_loader, labeled_subset, devise, tqdm, writer,
 
     with tqdm(total=iter_max) as progress_bar:
         while True:
-            for batch_idx, (x, y) in enumerate(train_loader):
+            for batch_idx, (x, y) in enumerate(train_loader): # Make parallel
                 i += 1
                 optimizer.zero_grad()
 
