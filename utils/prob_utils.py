@@ -1,11 +1,8 @@
 # Reference Stanford CS236 Fall 2019
-
-import numpy as np
-import os
-import shutil
-import sys
 import torch
-from codebase.models.vae import VAE
+from codebase.models.vae import CVAE
+from torch.nn import functional as F
+
 
 def sample_gaussian(m, v):
     """
@@ -14,7 +11,7 @@ def sample_gaussian(m, v):
     :param v: tensor: (batch, ...) Variance
     :return:
     """
-    shape =m.shape
+    shape = m.shape
     eps = torch.randn(shape)
     z = m + torch.sqrt(v) * eps
 

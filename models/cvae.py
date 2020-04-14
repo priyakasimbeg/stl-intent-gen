@@ -3,7 +3,7 @@ from models import nns
 from utils import prob_utils as ut
 from torch import nn
 from torch.nn import functional as F
-from torch.distributions.distribution.Distribution import MultivariateNormal
+import torch.distributions.multivatiate_normal as mn
 
 
 class CVAE(nn.Module):
@@ -42,10 +42,9 @@ class CVAE(nn.Module):
 
         z = ut.sample_gaussian(qm, qv)
         means = self.dec.decode(z)
-        N, M = means.size()
-        m = MultivariateNormal(means, torch.eye(M))
-        y_sampled = m.sample() # Todo fix this size
-        rec =  # Todo fix reconstruction loss
+        N, M = means.shape
+        m = mn.MultivariateNormal(means, torch.eye(M))
+        rec = - m.log_prob(y)# Todo fix reconstruction loss
         kl = torch.mean(ut.kl_normal(qm, qv, m, v))
 
         nelbo = rec + kl
@@ -90,6 +89,6 @@ class CVAE(nn.Module):
 
     def sample_x_given(self, z):
         means = self.compute_gaussian_params_given(z)
-        N, M = means.size()
-        m = MultivariateNormal(means, torch.eye(M))
-        return m.sample() #Todo fix this to sample batch
+        N, M = means.shape
+        m = mn.MultivariateNormal(means, torch.eye(M))
+        return m.sample()
