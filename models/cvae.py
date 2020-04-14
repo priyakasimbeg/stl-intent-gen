@@ -44,7 +44,7 @@ class CVAE(nn.Module):
         means = self.dec.decode(z)
         N, M = means.shape
         m = mn.MultivariateNormal(means, torch.eye(M))
-        rec = - m.log_prob(y)# Todo fix reconstruction loss
+        rec = torch.mean(- m.log_prob(y))# Todo fix reconstruction loss
         kl = torch.mean(ut.kl_normal(qm, qv, m, v))
 
         nelbo = rec + kl
