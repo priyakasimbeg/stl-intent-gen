@@ -3,9 +3,12 @@ from torch.utils import data
 import numpy as np
 import os
 
-DATA_FOLDER = 'data'
+import data_generator as dg
 
-class Dataset(data.Dataset):
+DATA_FOLDER = '../data'
+
+
+class Dataset(data.Dataset): # Todo: pytorch batch
 
     def __init__(self, path=os.path.join(DATA_FOLDER,'exp.npy')):
         self.tracks = np.load(path)
@@ -16,5 +19,7 @@ class Dataset(data.Dataset):
 
     def __getitem__(self, index):
         X = self.tracks[index]
+        x = X[: dg.HISTORY_SIZE]
+        y = X[dg.HISTORY_SIZE :]
 
-        return X
+        return x, y

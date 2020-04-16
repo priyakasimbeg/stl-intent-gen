@@ -4,11 +4,12 @@ from utils import prob_utils as ut
 from torch import nn
 from torch.nn import functional as F
 import torch.distributions.multivariate_normal as mn
+import torch.distributions as td
 
 
 class CVAE(nn.Module):
 
-    def __init__(self, nn='v1', name='vae', z_dim=2):
+    def __init__(self, nn='v1', name='vae', z_dim=2, beta=1):
         super().__init__()
 
         self.name = name
@@ -20,6 +21,7 @@ class CVAE(nn.Module):
 
         self.enc = nn.Encoder(self.z_dim)
         self.dec = nn.Decoder(self.z_dim)
+        self.beta = beta
 
         # Set prior as fixed parameter
         # Todo: incorporate relaxed one-hot categorical distribution
@@ -39,20 +41,22 @@ class CVAE(nn.Module):
 
         m = self.z_prior_m
         v = self.z_prior_v
+        prior = td.Normal(m, v)
         qm, qv = self.enc.encode(y, x)
 
-        z = ut.sample_gaussian(qm, qv)  # Todo use Normal rsample()
+        posterior = td.Normal(qm, qv)
+        z = posterior.rsample()
         means = self.dec.decode(z)
         N, M = means.shape
-        m = mn.MultivariateNormal(means, torch.eye(M))
-        rec = torch.mean(- m.log_prob(y))# Todo fix reconstruction loss
-        kl = torch.mean(ut.kl_normal(qm, qv, m, v))
+        p_y = mn.MultivariateNormal(means, torch.eye(M))
+        rec = torch.mean(- p_y.log_prob(y))
+        kl = torch.mean(td.kl.kl_divergence(posterior, prior))
 
-        nelbo = rec + kl
+        nelbo = rec + self.beta * kl
 
-        return nelbo
+        return nelbo, kl, rec
 
-    def loss (self, y, x):
+    def loss(self, y, x):
         """
         Compute loss
         :param y: tensor (batch_size, future_length)  Future trajectory
@@ -79,7 +83,7 @@ class CVAE(nn.Module):
 
     def sample_gaussian_params(self, batch):
         z = self.sample_z(batch)
-        return self.compute_sigmoid_given(z)
+        return self.compute_gaussian_params_given(z)
 
     def compute_gaussian_params_given(self, z):
         means = self.dec.decode(z)

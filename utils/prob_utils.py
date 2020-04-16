@@ -40,8 +40,6 @@ def kl_normal(qm, qv, pm, pv):
 
     return kl
 
-
-
 # Train Utils
 def reset_weights(m):
     try:
