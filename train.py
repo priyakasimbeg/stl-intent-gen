@@ -3,9 +3,9 @@ import torch
 from utils import prob_utils as ut
 from torch import nn, optim
 
-def train(model, train_loader, labeled_subset, devise, tqdm, writer,
-          iter_max = np.inf, iter_save=np.inf, model_name='model',
-          y_status='none', reinitialize=False, lr=1e-3):
+def train(model, train_loader, device, tqdm, writer,
+          iter_max = np.inf, iter_save=np.inf,
+          reinitialize=False, lr=1e-3):
 
     if reinitialize:
         model.apply(ut.reset_weights)
@@ -21,6 +21,8 @@ def train(model, train_loader, labeled_subset, devise, tqdm, writer,
                 optimizer.zero_grad()
 
                 # compute loss
+                x.to(device)
+                y.to(device)
                 loss, summaries = model.loss(y, x)
 
                 # optimization step
@@ -31,8 +33,9 @@ def train(model, train_loader, labeled_subset, devise, tqdm, writer,
                     loss='{:.2e}'.format(loss)
                 )
 
-                # # Log summaries
-                # if i % 50  == 0: ut.log_summaries(writer, summaries, i)
+                #  Log summaries
+                if i % 50 == 0:
+                    ut.log_summaries(writer, summaries, i)
 
                 # Save model
                 if i % iter_save ==0:

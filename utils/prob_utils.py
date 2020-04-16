@@ -1,11 +1,22 @@
 # Reference Stanford CS236 Fall 2019
 import torch
-from codebase.models.vae import CVAE
 from torch.nn import functional as F
+from torch.utils.data.sampler import SubsetRandomSampler
+from torch.utils.data import DataLoader
+import tensorflow as tf
 
+import dataset as ds
+import numpy as np
 import os
+import shutil
 
-# Model Utils
+from models.cvae import CVAE
+
+BATCH_SIZE = 16
+VALIDATION_SPLIT = 0.2
+RANDOM_SEED = 42
+
+## Model Utils
 def sample_gaussian(m, v):
     """
     Element-wise application reprarametrization trick to sample from Gaussian
@@ -33,19 +44,14 @@ def gaussian_parameters(h, dim=-1):
 
     return m, v
 
-#Todo KL normal
-def kl_normal(qm, qv, pm, pv):
-    element_wise = 0.5 * (torch.log(pv) - torch.log(qv) + qv / pv + (qm - pm).pow(2) / pv - 1 )
-    kl = element_wise.sum(-1)
 
-    return kl
-
-# Train Utils
+## Train Utils
 def reset_weights(m):
     try:
         m.reset_parameters()
     except AttributeError:
         pass
+
 
 def save_model_by_name(model, global_step):
     save_dir = os.path.join('checkpoints', model.name)
@@ -56,3 +62,83 @@ def save_model_by_name(model, global_step):
     state = model.state_dict()
     torch.save(state, file_path)
     print('Saved to {}'.format(file_path))
+
+
+def get_data_loaders(shuffle_dataset=True,
+                     batch_size=16, validation_split=0.2):
+
+    dataset = ds.Dataset()
+
+    # Generate indices for training and validation
+    dataset_size = len(dataset)
+    indices = list(range(dataset_size))
+
+    split = int(np.floor(validation_split * dataset_size))
+
+    if shuffle_dataset:
+        np.random.seed(RANDOM_SEED)
+        np.random.shuffle(indices)
+
+    train_indices, val_indices = indices[split:], indices[:split]
+
+
+    # Data samplers and loaders
+    train_sampler = SubsetRandomSampler(train_indices)
+    valid_sampler = SubsetRandomSampler(val_indices)
+
+    train_loader = DataLoader(dataset, batch_size=batch_size, sampler=train_sampler)
+    validation_loader = DataLoader(dataset, batch_size=batch_size, sampler=valid_sampler)
+
+    return train_loader, validation_loader
+
+
+def prepare_writer(model_name, overwrite_existing=False):
+    log_dir = os.path.join('logs', model_name)
+    save_dir = os.path.join('checkpoints', model_name)
+    if overwrite_existing:
+        delete_existing(log_dir)
+        delete_existing(save_dir)
+
+    writer = tf.summary.FileWriter(log_dir)
+    return writer
+
+
+def log_summaries(writer, summaries, global_step):
+    for tag in summaries:
+        val = summaries[tag]
+        tf_summary = tf.Summary.Value(tag=tag, simple_value=val)
+        writer.add_summary(tf.Summary(value=[tf_summary]), global_step)
+    writer.flush()
+
+
+def delete_existing(path):
+    if os.path.exists(path):
+        print("Deleting existing path: {}".format(path))
+        shutil.rmtree(path)
+
+## Evaluation
+def evaluate_lower_bound(model, labeled_test_subset):
+    check_model = isinstance(model, CVAE)
+    assert check_model, "This is only intended for CVAE"
+
+    print('*' * 80)
+    print("LOG-LIKELIHOOD LOWER BOUNDS ON TEST SUBSET")
+    print('*' * 80)
+
+    # TODO
+
+def load_model_by_name(model, global_step, device=None):
+    """
+    Load model based on name and checkpoint iteration step
+    :param model: Model object
+    :param global_step: int
+    :param device: string
+    :return:
+    """
+
+    file_path = os.path.join('checkpoints',
+                             model.name,
+                             'model-{:05d}.pt'.format(global_step))
+    state = torch.load(file_path, map_location=device)
+    model.load_state_dict(state)
+    print("loaded from {}".format(file_path))
