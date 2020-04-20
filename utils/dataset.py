@@ -18,8 +18,8 @@ class Dataset(data.Dataset): # Todo: pytorch batch
         return len(self.tracks)
 
     def __getitem__(self, index):
-        X = self.tracks[index].astype('float')
-        x = np.expand_dims(X[: dg.HISTORY_SIZE].astype('float'), 1)
-        y = np.expand_dims(X[dg.HISTORY_SIZE :].astype('float'), 1)
+        X = self.tracks[index].astype('float32')
+        x = X[: dg.HISTORY_SIZE].astype('float32')
+        y = X[dg.HISTORY_SIZE :].astype('float32')
 
         return x, y

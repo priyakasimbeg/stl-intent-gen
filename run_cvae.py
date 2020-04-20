@@ -26,7 +26,7 @@ pprint(vars(args))
 print('Model name:', model_name)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-train_loader, valid_loader =  ut.get_data_loaders()
+train_loader, valid_loader = ut.get_data_loaders()
 cvae = CVAE(z_dim=args.z, name=model_name).to(device)
 
 if args.train:

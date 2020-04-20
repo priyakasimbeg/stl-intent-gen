@@ -39,7 +39,7 @@ def gaussian_parameters(h, dim=-1):
     """
 
     m, h = torch.split(h, h.size(dim) // 2, dim = dim)
-    v = F.softplush(h) + 1e-8
+    v = F.softplus(h) + 1e-8
 
     return m, v
 
@@ -86,7 +86,7 @@ def get_data_loaders(shuffle_dataset=True,
     valid_sampler = SubsetRandomSampler(val_indices)
 
     train_loader = DataLoader(dataset, batch_size=batch_size, sampler=train_sampler)
-    validation_loader = DataLoader(dataset, batch_size=batch_size, sampler=valid_sampler)
+    validation_loader = DataLoader(dataset, batch_size=1, sampler=valid_sampler)
 
     return train_loader, validation_loader
 
@@ -103,11 +103,13 @@ def prepare_writer(model_name, overwrite_existing=False):
 
 
 def log_summaries(writer, summaries, global_step):
-    for tag in summaries:
-        val = summaries[tag]
-        tf_summary = tf.Summary.Value(tag=tag, simple_value=val)
-        writer.add_summary(tf.Summary(value=[tf_summary]), global_step)
-    writer.flush()
+    # with writer.as_default():
+    #     for tag in summaries:
+    #         val = summaries[tag]
+    #         tf.summary.scalar(tag, val, step=global_step)
+    #     #writer.add_summary(tf.summary(value=[tf_summary]), global_step)
+    # writer.flush()
+    pass
 
 
 def delete_existing(path):

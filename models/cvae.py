@@ -47,7 +47,7 @@ class CVAE(nn.Module):
 
         posterior = td.Normal(qm, qv)
         z = posterior.rsample()
-        means = self.dec.decode(z)
+        means = self.dec.decode(z, x)
         N, M = means.shape
         p_y = mn.MultivariateNormal(means, torch.eye(M))
         rec = torch.mean(- p_y.log_prob(y))
@@ -82,20 +82,9 @@ class CVAE(nn.Module):
             self.z_prior[1].expand(batch, self.z_dim)
         )
 
-    def sample_gaussian_params(self, batch):
-        z = self.sample_z(batch)
-        return self.compute_gaussian_params_given(z)
-
-    def compute_gaussian_params_given(self, z):
-        means = self.dec.decode(z)
-        return means
-
-    def sample_x(self, batch):
-        z = self.sample_z(batch)
-        return self.sample_x_given(z)
-
-    def sample_x_given(self, z):
-        means = self.compute_gaussian_params_given(z)
+    def sample_y_given(self, x, z):
+        means = self.dec.decode(z, x)
         N, M = means.shape
         m = mn.MultivariateNormal(means, torch.eye(M))
         return m.sample()
+

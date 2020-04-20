@@ -26,10 +26,12 @@ def train(model, train_loader, device, tqdm, writer,
                 loss, summaries = model.loss(y, x)
 
                 # optimization step
+                loss.backward()
                 optimizer.step()
 
                 # progress bar
-                progress_bar.set_post_fix(
+                progress_bar.update()
+                progress_bar.set_postfix(
                     loss='{:.2e}'.format(loss)
                 )
 
