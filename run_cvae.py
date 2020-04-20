@@ -5,9 +5,10 @@ from pprint import pprint
 
 from models.cvae import CVAE
 from train import train
+from utils import test_utils as tut
 from utils import prob_utils as ut
 
-parser = argparse.AgumentParser(formatter_class=argparse.ARgumentDefaultsHelpFormatter)
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('--z', type=int, default=1, help="Number of latent dimensions")
 parser.add_argument('--iter_max', type=int, default=20000, help="Number of training iterations")
 parser.add_argument('--iter_save', type=int, default=10000, help="Save model every n iterations")
@@ -24,7 +25,7 @@ model_name = '_'.join([t.format(v) for (t, v) in layout])
 pprint(vars(args))
 print('Model name:', model_name)
 
-device = torch.devise('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 train_loader, valid_loader =  ut.get_data_loaders()
 cvae = CVAE(z_dim=args.z, name=model_name).to(device)
 
@@ -39,8 +40,8 @@ if args.train:
           iter_max=args.iter_max,
           iter_save=args.iter_save)
 
-    ut.evaluate_lower_bound(cvae, valid_loader)
+    tut.evaluate_lower_bound(cvae, valid_loader)
 
 else:
-    ut.load_model_by_name(cvae, global_step=args.iter_max, device=device)
-    ut.evaluate_lower_bound(cvae, valid_loader)
+    tut.load_model_by_name(cvae, global_step=args.iter_max, device=device)
+    tut.evaluate_lower_bound(cvae, valid_loader)

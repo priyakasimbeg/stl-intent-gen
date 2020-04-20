@@ -2,9 +2,10 @@ import numpy as np
 import os
 
 MODES = ['functional', 'step']
-DATA_FOLDER = '../data'
+DATA_FOLDER = 'data'
 HISTORY_SIZE = 25
 SIZE = 50
+PREDICTION_SIZE = SIZE - HISTORY_SIZE
 END = 5
 DT = 0.1
 

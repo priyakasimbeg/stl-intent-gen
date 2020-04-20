@@ -5,12 +5,11 @@ from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.data import DataLoader
 import tensorflow as tf
 
-import dataset as ds
+from utils import dataset as ds
+
 import numpy as np
 import os
 import shutil
-
-from models.cvae import CVAE
 
 BATCH_SIZE = 16
 VALIDATION_SPLIT = 0.2
@@ -99,7 +98,7 @@ def prepare_writer(model_name, overwrite_existing=False):
         delete_existing(log_dir)
         delete_existing(save_dir)
 
-    writer = tf.summary.FileWriter(log_dir)
+    writer = tf.summary.create_file_writer(log_dir)
     return writer
 
 
@@ -115,30 +114,3 @@ def delete_existing(path):
     if os.path.exists(path):
         print("Deleting existing path: {}".format(path))
         shutil.rmtree(path)
-
-## Evaluation
-def evaluate_lower_bound(model, labeled_test_subset):
-    check_model = isinstance(model, CVAE)
-    assert check_model, "This is only intended for CVAE"
-
-    print('*' * 80)
-    print("LOG-LIKELIHOOD LOWER BOUNDS ON TEST SUBSET")
-    print('*' * 80)
-
-    # TODO
-
-def load_model_by_name(model, global_step, device=None):
-    """
-    Load model based on name and checkpoint iteration step
-    :param model: Model object
-    :param global_step: int
-    :param device: string
-    :return:
-    """
-
-    file_path = os.path.join('checkpoints',
-                             model.name,
-                             'model-{:05d}.pt'.format(global_step))
-    state = torch.load(file_path, map_location=device)
-    model.load_state_dict(state)
-    print("loaded from {}".format(file_path))

@@ -5,22 +5,22 @@ from torch import nn
 from torch.nn import functional as F
 import torch.distributions.multivariate_normal as mn
 import torch.distributions as td
+from models.nns import v1 as net
 
 
 class CVAE(nn.Module):
 
-    def __init__(self, nn='v1', name='vae', z_dim=2, beta=1):
+    def __init__(self, name='vae', z_dim=2, beta=1):
         super().__init__()
 
         self.name = name
         self.z_dim = z_dim
 
         # nn refers to specific architecture file found in models/nns/*.py
+        #nn = getattr(nns, nn) Doesnt work for some reason
 
-        nn = getattr(nns, nn)
-
-        self.enc = nn.Encoder(self.z_dim)
-        self.dec = nn.Decoder(self.z_dim)
+        self.enc = net.Encoder(self.z_dim)
+        self.dec = net.Decoder(self.z_dim)
         self.beta = beta
 
         # Set prior as fixed parameter
@@ -42,6 +42,7 @@ class CVAE(nn.Module):
         m = self.z_prior_m
         v = self.z_prior_v
         prior = td.Normal(m, v)
+
         qm, qv = self.enc.encode(y, x)
 
         posterior = td.Normal(qm, qv)
