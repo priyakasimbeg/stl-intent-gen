@@ -38,7 +38,7 @@ def gaussian_parameters(h, dim=-1):
     :return:
     """
 
-    m, h = torch.split(h, h.size(dim) // 2, dim = dim)
+    m, h = torch.split(h, h.size(dim) // 2, dim=dim)
     v = F.softplus(h) + 1e-8
 
     return m, v
