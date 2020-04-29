@@ -1,30 +1,42 @@
 import torch
-from torch import autograd, nn, optim
-from utils import prob_utils as ut
+from torch import nn
 
-from utils import data_generator as dg
+from utils import dataset as ds
 
 class Encoder(nn.Module):
-    def __init__(self, z_dim, x_dim=dg.HISTORY_SIZE, y_dim=dg.PREDICTION_SIZE):
+    def __init__(self, z_dim, x_dim=ds.HISTORY_SIZE, y_dim=ds.PREDICTION_SIZE):
         super().__init__()
         self.z_dim = z_dim
         self.x_dim = x_dim
         self.y_dim = y_dim
-        self.model = nn.Sequential(
-            nn.Linear(self.y_dim + self.x_dim, 100),
+        self.xy_model = nn.Sequential(
+            nn.Linear(self.x_dim + self.y_dim, 100),
             nn.ELU(),
             nn.Linear(100, 100),
             nn.ELU(),
             nn.Linear(100, z_dim)
         )
 
-    def encode(self, y, x):
+        self.x_model = nn.Sequential(
+            nn.Linear(self.x_dim, 100),
+            nn.ELU(),
+            nn.Linear(100, 100),
+            nn.ELU(),
+            nn.Linear(100, z_dim)
+        )
+
+    def q_encode(self, y, x):
         xy = torch.cat((x, y), dim=1)
-        return self.model(xy)
+        encoded_xy = self.xy_model(xy)
+        return encoded_xy
+
+    def p_encode(self, x):
+        encoded_x = self.x_model(x)
+        return encoded_x
 
 
 class Decoder(nn.Module):
-    def __init__(self, z_dim, x_dim=dg.HISTORY_SIZE, y_dim=dg.PREDICTION_SIZE):
+    def __init__(self, z_dim, x_dim=ds.HISTORY_SIZE, y_dim=ds.PREDICTION_SIZE):
         super().__init__()
         self.z_dim = z_dim
         self.y_dim = y_dim

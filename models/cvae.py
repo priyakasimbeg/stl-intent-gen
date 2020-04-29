@@ -44,23 +44,28 @@ class CVAE(nn.Module):
             posterior = td.normal(qm, qv)
             z = posterior.rsample()
             means = self.dec.decode(z, x)
-            print('here')
+            prior = td.Normal(self.z_prior_m, self.z_prior_v)
 
         if self.version == 'v2':
-            logits = self.enc.encode(y, x)
+            q_logits = self.enc.q_encode(y, x)
+            p_logits = self.enc.p_encode(x)
             # cite Gumbel-Softmax (Jang et al., 2016) and Concrete (Maddison et al., 2016) if using Relaxed version
-            # Todo: Also estimate temperature?
-            # Todo: KL not implemented for RelaxedOneHotCategorical?
-            posterior = td.OneHotCategorical(logits=logits)
-            z = posterior.sample()
+            # Todo: implement annealing temperature from 2.0
+            backpropable_posterior = td.RelaxedOneHotCategorical(1.0, logits=q_logits)
+            z = backpropable_posterior.rsample()
+            posterior = td.OneHotCategorical(logits=q_logits)
+
+            prior = td.OneHotCategorical(logits=p_logits)
             means = self.dec.decode(z, x)
 
+            # params = self.dec.named_parameters()
+            # for p in params:
+            #     print(p)
         n, m = means.shape
         p_y = td.MultivariateNormal(means, torch.eye(m))
 
-
         rec = torch.mean(- p_y.log_prob(y))
-        kl = torch.mean(td.kl.kl_divergence(posterior, self.prior))
+        kl = torch.mean(td.kl.kl_divergence(posterior, prior))
 
         nelbo = rec + self.beta * kl
 
@@ -85,22 +90,16 @@ class CVAE(nn.Module):
 
         return loss, summaries
 
-    def sample_z(self, batch_size):
+    def sample_z(self, x):
+        p_logits = self.enc.p_encode(x)
+        prior = td.OneHotCategorical(logits=p_logits)
 
-        return self.prior.sample(torch.tensor([batch_size]))
+        return prior.sample()
 
     def sample_y_given(self, x, z):
         params = self.dec.decode(z, x)
         N, M = params.shape
-
-        if self.version == 'v1':
-            dist = td.MultivariateNormal(params, torch.eye(M))
-
-        elif self.version == 'v2':
-            dist = td.OneHotCategorical(logits=params)
-
-        else:
-            raise ValueError('Version should be v1 or v2')
+        dist = td.MultivariateNormal(params, torch.eye(M))
 
         return dist.sample()
 
@@ -109,10 +108,5 @@ class CVAE(nn.Module):
             self.z_prior_m = torch.nn.Parameter(torch.zeros(1), requires_grad=False)
             self.z_prior_v = torch.nn.Parameter(torch.ones(1), requires_grad=False)
             self.z_prior = (self.z_prior_m, self.z_prior_v)
-            self.prior = td.Normal(self.z_prior_m, self.z_prior_v)
-
-        if self.version == 'v2':
-            self.z_prior_logprobs = torch.nn.Parameter(torch.ones(self.z_dim), requires_grad=False)
-            self.prior = td.OneHotCategorical(self.z_prior_logprobs)
 
 
