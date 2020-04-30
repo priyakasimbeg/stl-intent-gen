@@ -2,26 +2,25 @@ import numpy as np
 
 import torch
 from torch import nn
-from torch.nn import functional as F
 import torch.distributions as td
 
-from models.nns import v2 as net
-from utils import prob_utils as ut
+from models.nns import v3 as net
 
 
 class CVAE(nn.Module):
 
-    def __init__(self, name='vae', version='v2', z_dim=1, beta=1):
+    def __init__(self, x_dim, y_dim, z_dim=1, name='vae', version='v3', beta=1):
         super().__init__()
 
         self.name = name
         self.z_dim = z_dim
+        self.x_dim = x_dim
+        self.y_dim = y_dim
 
         # nn refers to specific architecture file found in models/nns/*.py
         #nn = getattr(nns, nn) Doesnt work for some reason
-
-        self.enc = net.Encoder(self.z_dim)
-        self.dec = net.Decoder(self.z_dim)
+        self.enc = net.Encoder(self.z_dim, self.x_dim, self.y_dim)
+        self.dec = net.Decoder(self.z_dim, self.x_dim, self.y_dim)
         self.beta = beta
 
         self.version = version
@@ -38,6 +37,8 @@ class CVAE(nn.Module):
                  kl: tensor
                  rec: tensor
         """
+        B, H, _ = np.shape(x)
+        _, P, _ = np.shape(y)
 
         if self.version == 'v1':
             qm, qv = self.enc.encode(y, x)
@@ -46,7 +47,11 @@ class CVAE(nn.Module):
             means = self.dec.decode(z, x)
             prior = td.Normal(self.z_prior_m, self.z_prior_v)
 
-        if self.version == 'v2':
+        if self.version == 'v3':
+            y = np.reshape(y, (B, -1))
+            x = np.reshape(x, (B, -1))
+
+        if self.version == 'v2' or self.version == 'v3':
             q_logits = self.enc.q_encode(y, x)
             p_logits = self.enc.p_encode(x)
             # cite Gumbel-Softmax (Jang et al., 2016) and Concrete (Maddison et al., 2016) if using Relaxed version
@@ -58,9 +63,6 @@ class CVAE(nn.Module):
             prior = td.OneHotCategorical(logits=p_logits)
             means = self.dec.decode(z, x)
 
-            # params = self.dec.named_parameters()
-            # for p in params:
-            #     print(p)
         n, m = means.shape
         p_y = td.MultivariateNormal(means, torch.eye(m))
 
@@ -91,17 +93,22 @@ class CVAE(nn.Module):
         return loss, summaries
 
     def sample_z(self, x):
+        B, H, _ = np.shape(x)
+        x = np.reshape(x, (B, -1))
         p_logits = self.enc.p_encode(x)
         prior = td.OneHotCategorical(logits=p_logits)
 
         return prior.sample()
 
     def sample_y_given(self, x, z):
+        B, H, _ = np.shape(x)
+        x = np.reshape(x, (B, -1))
         params = self.dec.decode(z, x)
         N, M = params.shape
         dist = td.MultivariateNormal(params, torch.eye(M))
+        y = dist.sample()
 
-        return dist.sample()
+        return y
 
     def set_priors(self):
         if self.version == 'v1':

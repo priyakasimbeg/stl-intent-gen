@@ -14,7 +14,9 @@ parser.add_argument('--iter_max', type=int, default=20000, help="Number of train
 parser.add_argument('--iter_save', type=int, default=10000, help="Save model every n iterations")
 parser.add_argument('--run', type=int, default=0, help="Run ID")
 parser.add_argument('--train', type=int, default=1, help="Flag for training")
-parser.add_argument('--version', type=str, default='v2', help="Version of model")
+parser.add_argument('--version', type=str, default='v3', help="Version of model")
+parser.add_argument('--data', type=str, default='fork', help="Data set")
+parser.add_argument('--history', type=int, default=20, help="History size")
 
 args = parser.parse_args()
 
@@ -28,8 +30,8 @@ pprint(vars(args))
 print('Model name:', model_name)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-train_loader, valid_loader = ut.get_data_loaders()
-cvae = CVAE(z_dim=args.z, name=model_name, version=args.version).to(device)
+train_loader, valid_loader = ut.get_data_loaders('fork', history_size=args.history)
+cvae = CVAE(x_dim=args.history, y_dim=50-args.history, z_dim=args.z, name=model_name, version=args.version).to(device)
 
 if args.train:
     writer = ut.prepare_writer(model_name, overwrite_existing=True)

@@ -74,7 +74,7 @@ class DataGenerator2D(DataGenerator):
         pos = self.pos
 
         # Randomness
-        v = self.v + np.random.random() * 0.2
+        v = self.v + self.v * np.random.random() * 0.2
 
         # Diretion settings
         if direction == 'right':
@@ -112,7 +112,7 @@ class DataGenerator2D(DataGenerator):
                 path.append(pos)
                 num_steps += 1
 
-        while num_steps < self.max_steps:
+        while num_steps < self.max_steps - 1:
             pos = pos + v * self.dt
             path.append(pos)
             num_steps += 1

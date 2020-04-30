@@ -5,10 +5,8 @@ import os
 
 import utils.data_generator as dg
 
-DATA_FOLDER = '../data'
-HISTORY_SIZE = 25
-TRAJECTORY_SIZE = 50
-PREDICTION_SIZE = TRAJECTORY_SIZE - HISTORY_SIZE
+DATA_FOLDER = 'data'
+HISTORY_SIZE = 20
 
 class Dataset(data.Dataset): # Todo: pytorch batch
 
