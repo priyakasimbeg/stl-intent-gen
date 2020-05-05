@@ -5,7 +5,7 @@ from torch import nn, optim
 
 def train(model, train_loader, device, tqdm, writer,
           iter_max = np.inf, iter_save=np.inf,
-          reinitialize=False, lr=1e-3):
+          reinitialize=False, lr=1e-2):
 
     if reinitialize:
         model.apply(ut.reset_weights)
@@ -24,6 +24,8 @@ def train(model, train_loader, device, tqdm, writer,
                 x.to(device)
                 y.to(device)
                 loss, summaries = model.loss(y, x)
+                rec = summaries['gen/rec']
+                kl = summaries['gen/kl_z']
 
                 # optimization step
                 loss.backward()
@@ -32,7 +34,7 @@ def train(model, train_loader, device, tqdm, writer,
                 # progress bar
                 progress_bar.update()
                 progress_bar.set_postfix(
-                    loss='{:.2e}'.format(loss)
+                    loss='{:.2e} - {:.2e} - {:.2e}'.format(loss, rec, kl)
                 )
 
                 #  Log summaries

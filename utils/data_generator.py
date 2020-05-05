@@ -52,6 +52,7 @@ class DataGenerator2D(DataGenerator):
         self.v = np.array([0.0, 0.8])
         self.pos = np.array([0, -1])
         self.directions = ['left', 'right', 'straight']
+        self.directions = ['straight']
         self.t_steps = np.arange(0, self.end, 0.1)
         self.max_steps = len(self.t_steps)
 
@@ -118,6 +119,7 @@ class DataGenerator2D(DataGenerator):
             num_steps += 1
 
         path = np.array(path)
+        path = path + np.random.randn(path.shape[0], path.shape[1]) * 0.01
 
         return path
 

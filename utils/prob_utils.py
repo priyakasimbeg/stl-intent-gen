@@ -92,24 +92,31 @@ def get_data_loaders(dataset='fork', shuffle_dataset=True,
 
 
 def prepare_writer(model_name, overwrite_existing=False):
-    # log_dir = os.path.join('logs', model_name)
-    # save_dir = os.path.join('checkpoints', model_name)
-    # if overwrite_existing:
-    #     delete_existing(log_dir)
-    #     delete_existing(save_dir)
-    #
-    # writer = tf.summary.create_file_writer(log_dir)
-    # return writer
-    pass
+    log_dir = os.path.join('logs', model_name)
+    save_dir = os.path.join('checkpoints', model_name)
+    if overwrite_existing:
+        delete_existing(log_dir)
+        delete_existing(save_dir)
+
+    writer = tf.summary.FileWriter(log_dir)
+    # writer = tf.summary.create_file_writer(log_dir) # TF2.0
+    return writer
 
 
 def log_summaries(writer, summaries, global_step):
+    # TF2
     # with writer.as_default():
     #     for tag in summaries:
     #         val = summaries[tag]
     #         tf.summary.scalar(tag, val, step=global_step)
     #     #writer.add_summary(tf.summary(value=[tf_summary]), global_step)
     # writer.flush()
+
+    for tag in summaries:
+        val = summaries[tag]
+        tf_summary = tf.Summary.Value(tag=tag, simple_value=val)
+        writer.add_summary(tf.Summary(value=[tf_summary]), global_step)
+    writer.flush()
     pass
 
 
