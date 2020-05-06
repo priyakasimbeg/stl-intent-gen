@@ -5,7 +5,7 @@ from torch import nn, optim
 
 def train(model, train_loader, device, tqdm, writer,
           iter_max = np.inf, iter_save=np.inf,
-          reinitialize=False, lr=1e-2):
+          reinitialize=False, lr=1e-3):
 
     if reinitialize:
         model.apply(ut.reset_weights)

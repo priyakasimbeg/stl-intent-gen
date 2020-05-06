@@ -50,18 +50,21 @@ class Decoder(nn.Module):
         rnn_state = self.proj_network(z) # Todo: how to get state?
         rnn_state = torch.unsqueeze(rnn_state, 0)
         rnn_state = (rnn_state, rnn_state) # Todo:help
-        out = x[:, -1:, :]
+        y_prev = x[:, -1:, :]
 
         if train:
             for t in range(y_pred_len):
-                out, rnn_state = self.rnn_network(out, rnn_state)
-                out = self.projout_network(out)
-                # Todo: Consider sampling out from gaussian with mean 'out'
-                y_out.append(out)
-                out = y[:, t:t+1, :]
+                out, rnn_state = self.rnn_network(y_prev, rnn_state)
+                u = self.projout_network(out)  # predict velocity
+                y_current = y_prev + u  # integrate
+                y_out.append(y_current)
+                y_prev = y[:, t:t+1, :]
         else:
             for t in range(y_pred_len):
-                out, rnn_state = self.rnn_network(out, rnn_state)
-                out = self.projout_network(out)
-                y_out.append(out)
+                out, rnn_state = self.rnn_network(y_prev, rnn_state)
+                u = self.projout_network(out)
+                y_current = y_prev + u
+                y_out.append(y_current)
+                y_prev = y_current
+
         return torch.cat(y_out, dim=1)

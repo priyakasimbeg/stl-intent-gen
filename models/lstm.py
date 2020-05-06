@@ -9,8 +9,8 @@ from models.nns import v4 as net
 
 class CVAE(nn.Module):
 
-    def __init__(self, x_dim, y_dim, z_dim=1, hidden_dim=10, pred_len=5,
-                 name='vae', version='v4', beta=10000):
+    def __init__(self, x_dim, y_dim, z_dim=1, hidden_dim=10, pred_len=20,
+                 name='vae', version='v4', beta=100):
         super().__init__()
 
         self.name = name
@@ -66,9 +66,9 @@ class CVAE(nn.Module):
 
         #Todo: incorporate covariance matrix
         for i in range(self.pred_len):
-            p_y = td.MultivariateNormal(y_pred_means[:, i, :], torch.eye(self.x_dim))
+            y_pred_mean = y_pred_means[:, i, :]
+            p_y = td.MultivariateNormal(y_pred_mean, torch.eye(self.x_dim) * 0.001)
             p_y_pred.append(p_y)
-            #
             rec = rec + torch.mean(- p_y.log_prob(y[:, i, :]))
 
         kl = torch.mean(td.kl.kl_divergence(posterior, prior))
@@ -110,7 +110,7 @@ class CVAE(nn.Module):
         p_y_pred = np.zeros((B, self.pred_len, self.x_dim))
 
         for i in range(self.pred_len):
-            p_y = td.MultivariateNormal(y_pred_means[:, i, :], torch.eye(self.x_dim))
+            p_y = td.MultivariateNormal(y_pred_means[:, i, :], torch.eye(self.x_dim) * 0.001)
             p_y_pred[:, i, :] = p_y.sample()
 
         return p_y_pred
