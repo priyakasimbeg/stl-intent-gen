@@ -203,7 +203,8 @@ class DataGenerator2D(DataGenerator):
             return path
 
 class FanGenerator(DataGenerator):
-    def __init__(self):
+
+    def __init__(self, noise=True):
         super().__init__()
         self.y_int = 0
         self.v = np.array([0.0, 0.8])
@@ -212,8 +213,10 @@ class FanGenerator(DataGenerator):
         self.t_steps = np.arange(0, self.end, 0.1)
         self.max_steps = len(self.t_steps)
         self.max_k = 2
+        self.noise = noise
 
-    def generate(self, path=os.path.join(DATA_FOLDER, 'fan')):
+    def generate(self, name='fan'):
+        path = os.path.join(DATA_FOLDER, name)
 
         tracks = []
 
@@ -271,7 +274,9 @@ class FanGenerator(DataGenerator):
             num_steps += 1
 
         path = np.array(path)
-        path = path + np.random.randn(path.shape[0], path.shape[1]) * 0.01
+
+        if self.noise:
+            path = path + np.random.randn(path.shape[0], path.shape[1]) * 0.01
 
         return path
     # Helper functions for

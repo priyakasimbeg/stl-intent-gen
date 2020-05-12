@@ -10,9 +10,13 @@ HISTORY_SIZE = 20
 
 class Dataset(data.Dataset): # Todo: pytorch batch
 
-    def __init__(self, path=os.path.join(DATA_FOLDER, 'exp.npy'),
-                       history_size = HISTORY_SIZE):
+    def __init__(self, path=os.path.join(DATA_FOLDER, 'fan_clean.npy'),
+                       history_size = HISTORY_SIZE,
+                       pstl_path=os.path.join(DATA_FOLDER, 'fan_clean_k.npy'),
+                       pstl=False):
         self.tracks = np.load(path)
+        self.pstl = pstl
+        self.c = np.load(pstl_path)
         self.ids = range(0, len(self.tracks))
         self.history_size = history_size
         self.trajectory_size = len(self.tracks[0])
@@ -26,4 +30,9 @@ class Dataset(data.Dataset): # Todo: pytorch batch
         x = X[: self.history_size].astype('float32')
         y = X[self.history_size:].astype('float32')
 
-        return x, y
+        if self.pstl:
+            c = self.c[index]
+            return x, y, c
+
+        else:
+            return x, y

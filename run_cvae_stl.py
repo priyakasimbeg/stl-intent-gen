@@ -3,7 +3,7 @@ import torch
 import tqdm
 from pprint import pprint
 
-from models.lstm import CVAE
+from models.lstm_stl import CVAE
 from train import train
 from utils import test_utils as tut
 from utils import prob_utils as ut
@@ -30,7 +30,7 @@ pprint(vars(args))
 print('Model name:', model_name)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-train_loader, valid_loader = ut.get_data_loaders(args.data, history_size=args.history)
+train_loader, valid_loader = ut.get_data_loaders(args.data, history_size=args.history, pstl=True)
 cvae = CVAE(x_dim=2, y_dim=2, z_dim=args.z, name=model_name, version=args.version).to(device)
 
 if args.train:
@@ -42,7 +42,8 @@ if args.train:
           tqdm=tqdm.tqdm,
           writer=writer,
           iter_max=args.iter_max,
-          iter_save=args.iter_save)
+          iter_save=args.iter_save,
+          pstl=True)
 
     #tut.evaluate_lower_bound(cvae, valid_loader)
 

@@ -64,9 +64,9 @@ def save_model_by_name(model, global_step):
 
 
 def get_data_loaders(dataset='fork', shuffle_dataset=True,
-                     batch_size=16, history_size=20, validation_split=0.2):
+                     batch_size=16, history_size=20, validation_split=0.2, pstl=False):
 
-    dataset = ds.Dataset(os.path.join(ds.DATA_FOLDER, '{}.npy'.format(dataset)), history_size=history_size)
+    dataset = ds.Dataset(os.path.join(ds.DATA_FOLDER, '{}.npy'.format(dataset)), history_size=history_size, pstl=pstl)
 
     # Generate indices for training and validation
     dataset_size = len(dataset)
