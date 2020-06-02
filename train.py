@@ -62,6 +62,7 @@ def train(model, train_loader, device, tqdm, writer,
                     loss, summaries = model.loss(y, x, k)
                     rec = summaries['gen/rec']
                     kl = summaries['gen/kl_z']
+                    rob = summaries['gen/robustness']
 
 
                     # optimization step

@@ -3,7 +3,6 @@ from torch.utils import data
 import numpy as np
 import os
 
-import utils.data_generator as dg
 
 DATA_FOLDER = 'data'
 HISTORY_SIZE = 20
@@ -11,12 +10,12 @@ HISTORY_SIZE = 20
 class Dataset(data.Dataset): # Todo: pytorch batch
 
     def __init__(self, path=os.path.join(DATA_FOLDER, 'fan_clean.npy'),
-                       history_size = HISTORY_SIZE,
-                       pstl_path=os.path.join(DATA_FOLDER, 'fan_clean_k.npy'),
-                       pstl=False):
+                 history_size=HISTORY_SIZE,
+                 meta_path=os.path.join(DATA_FOLDER, 'fan_clean_meta.npy'),
+                 meta=False):
         self.tracks = np.load(path)
-        self.pstl = pstl
-        self.c = np.load(pstl_path)
+        self.meta = meta
+        self.c = np.load(meta_path)
         self.ids = range(0, len(self.tracks))
         self.history_size = history_size
         self.trajectory_size = len(self.tracks[0])
@@ -30,8 +29,9 @@ class Dataset(data.Dataset): # Todo: pytorch batch
         x = X[: self.history_size].astype('float32')
         y = X[self.history_size:].astype('float32')
 
-        if self.pstl:
-            c = self.c[index]
+        if self.meta:
+            c = np.expand_dims(self.c[index], -1)
+            c = c.astype('float32')
             return x, y, c
 
         else:

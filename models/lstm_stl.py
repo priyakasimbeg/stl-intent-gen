@@ -3,17 +3,24 @@ import torch
 from torch import nn
 import torch.distributions as td
 
-from models.nns import v4 as net
+from models.nns import v5 as net
 
-import sys
-sys.path.append('../../../stlcg/src')
 import stlcg
 
 
 class CVAE(nn.Module):
 
-    def __init__(self, x_dim, y_dim, z_dim=1, hidden_dim=10, pred_len=20,
-                 name='vae', version='v4', beta=100, beta_r=1):
+    def __init__(self, x_dim, y_dim,
+                 z_dim=1,
+                 hidden_dim=10,
+                 pred_len=20,
+                 name='vae',
+                 version='v5',
+                 beta=100,
+                 beta_r=10,
+                 c_dim=1,
+                 stl=True,
+                 robustness_type='curvature'):
         super().__init__()
 
         self.name = name
@@ -26,14 +33,18 @@ class CVAE(nn.Module):
         # nn refers to specific architecture file found in models/nns/*.py
         #nn = getattr(nns, nn) Doesnt work for some reason
         self.enc = net.Encoder(self.z_dim, self.x_dim, self.y_dim, self.hidden_dim)
-        self.dec = net.Decoder(self.z_dim, self.x_dim, self.y_dim, self.hidden_dim)
+        self.dec = net.Decoder(self.z_dim, self.x_dim, self.y_dim, self.hidden_dim, c_dim)
         self.beta = beta
-        self.beta_r = beta_r
+
+        if stl:
+            self.beta_r = beta_r
+        else:
+            self.beta_r = 0
 
         self.version = version
 
-        # Set prior attributes
-        self.set_priors()
+        self.robustness_type = robustness_type
+
 
     def negative_elbo_bound(self, y, x, k):
         """
@@ -61,11 +72,11 @@ class CVAE(nn.Module):
         prior = td.OneHotCategorical(logits=p_logits)
 
         # Todo: predict u means instead and sigma coefficients
-        y_pred_means = self.dec.decode(z, x, self.pred_len, train=True, y=y)
+        y_pred_means = self.dec.decode(k, z, x, self.pred_len, train=True, y=y)
 
         n, m, _ = y_pred_means.shape
 
-        y_pred = np.zeros((B, self.pred_len, self.x_dim))
+        y_pred = torch.zeros((B, self.pred_len, self.x_dim))
         rec = 0
 
         #Todo: incorporate covariance matrix
@@ -79,7 +90,7 @@ class CVAE(nn.Module):
         nelbo = rec + self.beta * kl
 
         # curvature
-        robustness = self.robustness_loss(y_pred, k)
+        robustness = self.robustness_loss(y_pred, k, type=self.robustness_type)
 
         return nelbo, kl, rec, robustness
 
@@ -92,6 +103,7 @@ class CVAE(nn.Module):
         """
         nelbo, kl, rec, robustness = self.negative_elbo_bound(y, x, k)
         loss = nelbo + self.beta_r * robustness
+        #loss = nelbo
 
         summaries = dict((
             ('train/loss', nelbo),
@@ -122,9 +134,9 @@ class CVAE(nn.Module):
 
         return p_y_pred
 
-    def sample_y(self, x):
+    def sample_y(self, x, c):
         z = self.sample_z(x)
-        y_pred = self.sample_y_given(x, z)
+        y_pred = self.sample_y_given(x, z, c)
 
         return y_pred
 
@@ -150,27 +162,68 @@ class CVAE(nn.Module):
 
         return k
 
-    def robustness_loss(self, y_pred, k):
+    def robustness_loss(self, y_pred, k, type='curvature'):
         """
         Calculate robustness loss for curvature
         :param y_pred:
         :param k:
         :return:
         """
-        # Estimate curvature from predictions
-        k_pred = self.curvature(y_pred)
 
+        if type == 'curvature':
+            robustness = self.robustness_curvature(y_pred, k)
 
-        # Set up STL formula
-        kf = stlcg.Expression('yf')
-        phi_2 = kf > torch.as_tensor(k - 0.3).float()
-        phi_3 = kf < torch.as_tensor(k + 0.3).float()
+        elif type == 'stop':
+            robustness = self.robustness_stop(y_pred, k)
 
-        phi = phi_2 & phi_3
-        psi = stlcg.Always(subformula=phi)
-
-        # Calculate robustness
-        robustness = torch.relu(-psi.robustness((psi, psi), scale=-1)).sum()
+        else:
+            raise ValueError('Invalid argument of robustness type')
 
         return robustness
+
+    def robustness_curvature(self, y_pred, k):
+
+        # Estimate curvature from predictions
+        k_pred = self.curvature(y_pred)
+        # Set up STL formula
+        kf = stlcg.Expression('yf')
+        phi_2 = kf > torch.as_tensor(k.unsqueeze(-1) - 0.3).float()
+        phi_3 = kf < torch.as_tensor(k.unsqueeze(-1) + 0.3).float()
+
+        phi = phi_2 & phi_3
+        psi = stlcg.Always(subformula=phi, interval=[0, 8])
+
+        # Calculate robustness
+        robustness = torch.relu(-psi.robustness((k_pred.unsqueeze(-1), k_pred.unsqueeze(-1)), scale=-1)).sum()
+
+        return robustness
+
+    def robustness_stop(self, y_pred, k, eps=0.01):
+        """
+        Calculate robustness based on stopping condition at (0,0)
+        :param y_pred:
+        :param k:
+        :return:
+        """
+        _, N, _ = y_pred.shape
+        # stopping formula
+
+        x_coord = stlcg.Expression('x', y_pred[:, :, 0].unsqueeze(-1))
+        y_coord = stlcg.Expression('y', y_pred[:, :, 1].unsqueeze(-1))
+
+        min = torch.as_tensor([-eps]).float()
+        max = torch.as_tensor([eps]).float()
+
+        # psi = car is in box
+        phi1 = (x_coord > min) & (x_coord < max)
+        phi2 = (y_coord > min) & (y_coord < max)
+        phi_A = (phi1 & phi2)
+
+        psi1 = stlcg.Always(subformula=phi_A, interval=[0, 20])
+
+        robustness = (k.unsqueeze(-1) * torch.relu(-psi1.robustness(((x_coord, x_coord), (y_coord, y_coord)), scale=-1)))
+        robustness = robustness.sum()
+        return robustness
+
+
 

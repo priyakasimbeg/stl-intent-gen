@@ -281,6 +281,110 @@ class FanGenerator(DataGenerator):
         return path
     # Helper functions for
 
+class StopGenerator(DataGenerator):
+    def __init__(self):
+        super().__init__()
+        self.y_int = 0
+        self.v = np.array([0.0, 0.8])
+        self.pos = np.array([0, -1])
+        self.directions = ['straight']
+        self.t_steps = np.arange(0, self.end, 0.1)
+        self.max_steps = len(self.t_steps)
+        self.break_distance = 0.25
+        self.eps = 0.01 # stop velocity tolerance
+
+
+    def generate(self, path=os.path.join(DATA_FOLDER, 'stop')):
+
+        tracks = []
+        indicators = []
+
+        partition_size = self.size // len(self.directions)
+
+        for direction in self.directions:
+            for i in range(partition_size):
+                stop_sign = np.random.random() > 0.5
+                track = self.generate_track(direction, stop_sign)
+                tracks.append(track)
+                indicators.append(stop_sign)
+
+        np.save(path, tracks)
+        np.save(path + '_indicators', indicators)
+
+    def generate_track(self, direction, stop_sign):
+        # Starting position
+        pos = self.pos
+
+        # Randomness
+        v = self.v + self.v * np.random.random() * 0.2
+        v_start = v
+
+        # Diretion settings
+        if direction == 'right':
+            r = 1.0 + np.random.random() * 0.2
+            v_end = np.array([1.0, 0.])
+            a_v = - np.linalg.norm(v) / r  # sign
+            phi_0 = np.pi
+
+        if direction == 'left':
+            r = 1.5 + np.random.random() * 0.2
+            v_end = np.array([-1.0, 0.])
+            a_v = np.linalg.norm(v) / r  # sign
+            phi_0 = 0
+
+        # Start generating
+        num_steps = 0
+
+        path = [pos]
+
+        # Drive up to intersection - break distance
+        while pos[1] < self.y_int - self.break_distance:
+            pos = pos + self.dt * v
+            path.append(pos)
+            num_steps += 1
+
+        if stop_sign:
+        # Calculate deceleration rate:
+            t_break = 2 * self.break_distance / v
+            a_break = v / t_break
+
+            # Breaking phase
+            while sum(np.greater(v, np.array([0, 0]) + self.eps)):
+                v = v - a_break * self.dt
+                pos = pos + self.dt * v
+                path.append(pos)
+                num_steps += 1
+           # Stop phase
+            for i in range(5):
+                path.append(pos)
+                num_steps += 1
+
+            # Continue
+            v = v_start
+
+        if direction == 'right' or direction == 'left':
+            t = 0
+            while abs(v[1] - v_end[1]) > 0.1:
+                # for i in range(50):
+                vx = - a_v * r * np.sin(phi_0 + a_v * t)
+                vy = a_v * r * np.cos(phi_0 + a_v * t)
+                v = np.array([vx, vy])
+                pos = pos + v * self.dt
+
+                t = t + self.dt
+                path.append(pos)
+                num_steps += 1
+
+        while num_steps < self.max_steps - 1:
+            pos = pos + v * self.dt
+            path.append(pos)
+            num_steps += 1
+
+        path = np.array(path)
+        path = path + np.random.randn(path.shape[0], path.shape[1]) * 0.002
+
+        return path
+
 
 
 

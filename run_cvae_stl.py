@@ -14,10 +14,11 @@ parser.add_argument('--iter_max', type=int, default=20000, help="Number of train
 parser.add_argument('--iter_save', type=int, default=10000, help="Save model every n iterations")
 parser.add_argument('--run', type=int, default=0, help="Run ID")
 parser.add_argument('--train', type=int, default=1, help="Flag for training")
-parser.add_argument('--version', type=str, default='v3', help="Version of model")
-parser.add_argument('--data', type=str, default='fork', help="Data set")
+parser.add_argument('--version', type=str, default='v6', help="Version of model")
+parser.add_argument('--data', type=str, default='fan_clean', help="Data set")
 parser.add_argument('--history', type=int, default=20, help="History size")
-
+parser.add_argument('--stl', type=int, default=1, help="Use STL formula")
+parser.add_argument('--experiment', type=str, default='curvature', help="Robustness loss")
 args = parser.parse_args()
 
 layout = [
@@ -30,8 +31,14 @@ pprint(vars(args))
 print('Model name:', model_name)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-train_loader, valid_loader = ut.get_data_loaders(args.data, history_size=args.history, pstl=True)
-cvae = CVAE(x_dim=2, y_dim=2, z_dim=args.z, name=model_name, version=args.version).to(device)
+train_loader, valid_loader = ut.get_data_loaders(args.data, history_size=args.history, meta=True)
+cvae = CVAE(x_dim=2,
+            y_dim=2,
+            z_dim=args.z,
+            name=model_name,
+            version=args.version,
+            stl=args.stl,
+            robustness_type=args.experiment).to(device)
 
 if args.train:
     writer = ut.prepare_writer(model_name, overwrite_existing=True)
@@ -44,8 +51,6 @@ if args.train:
           iter_max=args.iter_max,
           iter_save=args.iter_save,
           pstl=True)
-
-    #tut.evaluate_lower_bound(cvae, valid_loader)
 
 else:
     tut.load_model_by_name(cvae, global_step=args.iter_max, device=device)

@@ -32,7 +32,7 @@ class Encoder(nn.Module):
 
 
 class Decoder(nn.Module):
-    def __init__(self, z_dim, x_dim, y_dim, c_dim, hidden_dim):
+    def __init__(self, z_dim, x_dim, y_dim, hidden_dim, c_dim):
         super().__init__()
         self.z_dim = z_dim
         self.y_dim = y_dim
